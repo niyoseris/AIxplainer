@@ -101,8 +101,49 @@ function saveResponseType(type) {
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "open_ai_chat") {
-    const selectedText = request.text;
+    let selectedText = request.text;
     const errorMessage = request.error || null;
+    
+    // Special handling for Twitter/X
+    if (window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com')) {
+      // If no text is selected, try to get text from the clicked tweet
+      if (!selectedText) {
+        // Try multiple possible selectors for tweet content
+        const possibleSelectors = [
+          '[data-testid="tweetText"]',
+          '[data-testid="tweet"]',
+          'article[role="article"] div[lang]',
+          'div[data-tweet-text-content-part]',
+          'div[class*="tweet-text"]'
+        ];
+        
+        for (const selector of possibleSelectors) {
+          const elements = document.querySelectorAll(selector);
+          if (elements.length > 0) {
+            // Get the most recently interacted with or visible tweet
+            const element = Array.from(elements).find(el => {
+              const rect = el.getBoundingClientRect();
+              return rect.top >= 0 && rect.bottom <= window.innerHeight;
+            }) || elements[0];
+            
+            if (element) {
+              selectedText = element.textContent;
+              break;
+            }
+          }
+        }
+      }
+      
+      // Clean up Twitter's special characters and formatting
+      if (selectedText) {
+        selectedText = selectedText
+          .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+          .replace(/[""]/g, '"') // Replace smart quotes
+          .replace(/https?:\/\/\S+/g, '') // Remove URLs
+          .replace(/\s+/g, ' ') // Clean up any double spaces created by URL removal
+          .trim();
+      }
+    }
     
     // Load language preference first, then open chat
     loadPreferences().then(() => {
