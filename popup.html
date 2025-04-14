@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Text Assistant</title>
+  <style>
+    body {
+      width: 300px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 15px;
+      color: #333;
+    }
+    
+    h1 {
+      font-size: 18px;
+      margin-top: 0;
+      color: #4a6cf7;
+    }
+    
+    p {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 15px;
+    }
+    
+    .instructions {
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-left: 4px solid #4a6cf7;
+    }
+    
+    ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    li {
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    footer {
+      font-size: 12px;
+      color: #777;
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .settings-button {
+      background-color: #4a6cf7;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      width: 100%;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+
+    .settings-button:hover {
+      background-color: #3a5ce6;
+    }
+
+    .api-status {
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .status-configured {
+      background-color: #66bb6a;
+    }
+
+    .status-not-configured {
+      background-color: #ef5350;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="assistantTitle">AI Text Assistant</h1>
+  
+  <div id="apiStatus" class="api-status">
+    <div id="statusIndicator" class="status-indicator status-not-configured"></div>
+    <span id="statusText">Checking API configuration...</span>
+  </div>
+  
+  <div class="instructions">
+    <p><strong>How to use:</strong></p>
+    <ol>
+      <li>Select text on any webpage</li>
+      <li>Right-click on the selected text</li>
+      <li>Choose "Ask AI about selected text"</li>
+      <li>Chat with the AI assistant in the popup window</li>
+    </ol>
+  </div>
+  
+  <p>You can continue the conversation with follow-up questions and prompts directly in the chat window.</p>
+  
+  <button id="settingsButton" class="settings-button">Open Settings</button>
+  
+  <footer>
+    AI Text Assistant v1.0
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html> 
