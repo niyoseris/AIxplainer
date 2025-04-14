@@ -100,6 +100,12 @@ function saveResponseType(type) {
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Handle ping message to check if content script is loaded
+  if (request.action === "ping") {
+    sendResponse({ status: "ok" });
+    return true;
+  }
+
   if (request.action === "open_ai_chat") {
     let selectedText = request.text;
     const errorMessage = request.error || null;
@@ -148,8 +154,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Load language preference first, then open chat
     loadPreferences().then(() => {
       openAIChatInterface(selectedText, errorMessage);
+      sendResponse({ success: true }); // Send response after chat is opened
+    }).catch(error => {
+      console.error('Error loading preferences:', error);
+      sendResponse({ success: false, error: error.message });
     });
-    return true;
+    
+    return true; // Will respond asynchronously
   }
   
   // Handle reopening chat from extension icon
@@ -166,8 +177,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // If closed, reopen with empty initial text
         openAIChatInterface("");
       }
+      sendResponse({ success: true }); // Send response after chat is handled
+    }).catch(error => {
+      console.error('Error reopening chat:', error);
+      sendResponse({ success: false, error: error.message });
     });
-    return true;
+    
+    return true; // Will respond asynchronously
   }
 });
 
@@ -675,7 +691,7 @@ function sendMessage(text) {
   // Add AI typing indicator
   const aiMessageElement = document.createElement('div');
   aiMessageElement.className = 'ai-chat-message ai-message loading';
-  aiMessageElement.textContent = 'Thinking';
+  aiMessageElement.textContent = getTranslation('thinking');
   messagesContainer.appendChild(aiMessageElement);
   
   // Scroll to bottom
@@ -684,59 +700,62 @@ function sendMessage(text) {
   // Get selected text if any
   const selectedText = window.getSelection().toString();
   
-  // Add message to conversation history
-  if (!conversationHistory) {
-    conversationHistory = [];
-  }
-  
-  conversationHistory.push({ role: 'user', content: text });
-  
-  // Send message to background script
-  chrome.runtime.sendMessage({
-    action: 'get_ai_response',
-    message: text,
-    conversationHistory: conversationHistory,
-    selectedText: selectedText,
-    responseType: responseType
-  }, (response) => {
-    if (response && response.content) {
-      // Update AI message with response
-      aiMessageElement.classList.remove('loading');
-      
-      // Format markdown content
-      const formattedContent = formatMarkdown(response.content);
-      aiMessageElement.innerHTML = formattedContent;
-      
-      // Add response to conversation history
-      conversationHistory.push({ role: 'assistant', content: response.content });
-      
-      // Scroll to bottom
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    } else if (response && response.error) {
-      // Show error message
-      aiMessageElement.classList.remove('loading');
-      aiMessageElement.classList.add('error-message');
-      
-      if (response.error === 'api_key_missing') {
-        // Create settings button
-        const settingsContainer = document.createElement('div');
-        settingsContainer.className = 'ai-settings-container';
-        const settingsLink = document.createElement('button');
-        settingsLink.className = 'ai-settings-link';
-        settingsLink.textContent = 'Configure API Key';
-        settingsLink.addEventListener('click', openOptionsPage);
-        settingsContainer.appendChild(settingsLink);
-        
-        aiMessageElement.textContent = 'API key is missing or invalid. Please configure your API key in the settings.';
-        messagesContainer.appendChild(settingsContainer);
-      } else {
-        aiMessageElement.textContent = `Error: ${response.error}`;
+  // Create a promise for the message response
+  const messagePromise = new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({
+      action: 'get_ai_response',
+      message: text,
+      selectedText: selectedText,
+      responseType: currentResponseType
+    }, response => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+        return;
       }
-    } else {
-      // Generic error
+      resolve(response);
+    });
+  });
+  
+  // Handle the response
+  messagePromise
+    .then(response => {
+      if (response.error) {
+        aiMessageElement.classList.remove('loading');
+        aiMessageElement.classList.add('error-message');
+        
+        if (response.error.includes('API key')) {
+          const settingsLink = document.createElement('button');
+          settingsLink.className = 'ai-settings-link';
+          settingsLink.textContent = getTranslation('openSettings');
+          settingsLink.addEventListener('click', () => {
+            chrome.runtime.sendMessage({ action: 'open_options' });
+          });
+          
+          const settingsContainer = document.createElement('div');
+          settingsContainer.className = 'ai-settings-container';
+          settingsContainer.appendChild(settingsLink);
+          
+          aiMessageElement.textContent = getTranslation('apiKeyError');
+          messagesContainer.appendChild(settingsContainer);
+        } else {
+          aiMessageElement.textContent = response.error;
+        }
+      } else {
+        // Replace loading message with actual response
+        aiMessageElement.innerHTML = markdownParser.parse(response.response || response.content);
+        aiMessageElement.classList.remove('loading');
+        
+        // Add to chat history
+        chatHistory.push(aiMessageElement.cloneNode(true));
+      }
+      
+      // Scroll to the bottom
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    })
+    .catch(error => {
+      console.error('Error sending message:', error);
       aiMessageElement.classList.remove('loading');
       aiMessageElement.classList.add('error-message');
-      aiMessageElement.textContent = 'Failed to get response. Please try again.';
-    }
-  });
+      aiMessageElement.textContent = 'An error occurred while sending the message. Please try again.';
+    });
 } 

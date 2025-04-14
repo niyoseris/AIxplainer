@@ -64,9 +64,27 @@ const responseTypeInstructions = {
 
 // Listen for extension icon clicks
 chrome.action.onClicked.addListener((tab) => {
-  // Send message to content script to reopen or create chat window
-  chrome.tabs.sendMessage(tab.id, {
-    action: "reopen_chat"
+  // Ensure content script is loaded before sending message
+  chrome.tabs.sendMessage(tab.id, { action: "ping" }, response => {
+    if (chrome.runtime.lastError) {
+      // Content script not loaded, inject it
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['markdown.js', 'content.js']
+      }).then(() => {
+        // Now send the reopen message
+        chrome.tabs.sendMessage(tab.id, {
+          action: "reopen_chat"
+        });
+      }).catch(err => {
+        console.error('Failed to inject content script:', err);
+      });
+    } else {
+      // Content script is already loaded, send message directly
+      chrome.tabs.sendMessage(tab.id, {
+        action: "reopen_chat"
+      });
+    }
   });
 });
 
@@ -100,28 +118,50 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
           break;
       }
       
-      if (!apiKey) {
-        // If API key is not set, send a message to open settings
-        chrome.tabs.sendMessage(tab.id, {
-          action: "open_ai_chat",
-          text: info.selectionText,
-          error: `API key not set for ${provider}. Please set your API key in the extension settings.`
-        });
-      } else {
-        // Initialize conversation history for this tab if it doesn't exist
-        if (!tabConversations[tab.id]) {
-          tabConversations[tab.id] = [];
+      // Ensure content script is loaded before sending message
+      chrome.tabs.sendMessage(tab.id, { action: "ping" }, response => {
+        if (chrome.runtime.lastError) {
+          // Content script not loaded, inject it
+          chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['markdown.js', 'content.js']
+          }).then(() => {
+            // Now send the actual message
+            sendMessageToTab(tab.id, apiKey, provider, info.selectionText);
+          }).catch(err => {
+            console.error('Failed to inject content script:', err);
+          });
+        } else {
+          // Content script is already loaded, send message directly
+          sendMessageToTab(tab.id, apiKey, provider, info.selectionText);
         }
-        
-        // If API key is set, send the selected text to the content script
-        chrome.tabs.sendMessage(tab.id, {
-          action: "open_ai_chat",
-          text: info.selectionText
-        });
-      }
+      });
     });
   }
 });
+
+// Helper function to send message to tab
+function sendMessageToTab(tabId, apiKey, provider, selectionText) {
+  if (!apiKey) {
+    // If API key is not set, send a message to open settings
+    chrome.tabs.sendMessage(tabId, {
+      action: "open_ai_chat",
+      text: selectionText,
+      error: `API key not set for ${provider}. Please set your API key in the extension settings.`
+    });
+  } else {
+    // Initialize conversation history for this tab if it doesn't exist
+    if (!tabConversations[tabId]) {
+      tabConversations[tabId] = [];
+    }
+    
+    // If API key is set, send the selected text to the content script
+    chrome.tabs.sendMessage(tabId, {
+      action: "open_ai_chat",
+      text: selectionText
+    });
+  }
+}
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -412,31 +452,63 @@ async function getPerplexityResponse(apiKey, modelVersion, conversationHistory, 
   };
   
   try {
+    console.log('Sending request to Perplexity API:', {
+      url,
+      model: modelVersion,
+      messageCount: formattedMessages.length
+    });
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': apiKey // Remove 'Bearer ' prefix as Perplexity doesn't require it
       },
       body: JSON.stringify(requestBody)
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || `Status: ${response.status}`);
+    // First try to get the response as text
+    const responseText = await response.text();
+    
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse Perplexity API response:', responseText);
+      if (responseText.includes('401 Authorization Required')) {
+        throw new Error('Invalid Perplexity API key. Please check your API key in the settings.');
+      }
+      throw new Error(`Invalid response from Perplexity API: ${responseText.substring(0, 100)}...`);
     }
     
-    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid Perplexity API key. Please check your API key in the settings.');
+      }
+      throw new Error(data.error?.message || `Perplexity API error: ${response.status} - ${JSON.stringify(data)}`);
+    }
     
     // Extract the text from the response
     if (data.choices && data.choices[0]?.message?.content) {
       return data.choices[0].message.content;
     } else {
+      console.error('Unexpected Perplexity API response format:', data);
       throw new Error("Unexpected response format from Perplexity API");
     }
   } catch (error) {
     console.error("Error calling Perplexity API:", error);
-    throw error;
+    
+    // Provide a more user-friendly error message
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('Could not connect to Perplexity API. Please check your internet connection.');
+    } else if (error.message.includes('401') || error.message.includes('Authorization Required')) {
+      throw new Error('Invalid Perplexity API key. Please check your API key in the settings.');
+    } else if (error.message.includes('429')) {
+      throw new Error('Perplexity API rate limit exceeded. Please try again later.');
+    } else {
+      throw new Error(`Error from Perplexity API: ${error.message}`);
+    }
   }
 }
 

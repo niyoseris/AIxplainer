@@ -153,11 +153,20 @@
       <label for="provider">AI Provider</label>
       <select id="provider">
         <option value="gemini">Google Gemini</option>
-        <option value="perplexity">Perplexity AI</option>
         <option value="together">Together AI</option>
         <option value="anthropic">Anthropic AI</option>
       </select>
       <p class="api-description">Select which AI provider to use for generating responses.</p>
+    </div>
+    
+    <!-- Chat Language Setting -->
+    <div class="form-group">
+      <label for="chatLanguage">Chat Language</label>
+      <select id="chatLanguage">
+        <option value="en">English</option>
+        <option value="tr">Turkish</option>
+      </select>
+      <p class="api-description">Select the language for AI responses.</p>
     </div>
     
     <!-- Gemini Provider Settings -->
@@ -182,33 +191,6 @@
         <label for="geminiCustomModel">Custom Model Name</label>
         <input type="text" id="geminiCustomModel" placeholder="Enter custom Gemini model name">
         <p class="api-description">Enter the exact model identifier for a custom Gemini model.</p>
-      </div>
-    </div>
-    
-    <!-- Perplexity Provider Settings -->
-    <div id="perplexity-settings" class="provider-settings provider-dependent">
-      <div class="form-group">
-        <label for="perplexityApiKey">Perplexity API Key</label>
-        <input type="text" id="perplexityApiKey" placeholder="Enter your Perplexity API Key">
-        <p class="api-description">Your API key will be stored locally in your browser and never sent anywhere except to the Perplexity API.</p>
-      </div>
-      
-      <div class="form-group">
-        <label for="perplexityModelVersion">Model Version</label>
-        <select id="perplexityModelVersion">
-          <option value="sonar-small-online">Sonar Small Online</option>
-          <option value="sonar-medium-online">Sonar Medium Online</option>
-          <option value="mistral-7b-instruct">Mistral 7B Instruct</option>
-          <option value="llama-3-8b-instruct">Llama 3 8B Instruct</option>
-          <option value="mixtral-8x7b-instruct">Mixtral 8x7B Instruct</option>
-          <option value="custom">Custom Model</option>
-        </select>
-      </div>
-      
-      <div class="form-group custom-model-field" id="perplexity-custom-model-container" style="display: none;">
-        <label for="perplexityCustomModel">Custom Model Name</label>
-        <input type="text" id="perplexityCustomModel" placeholder="Enter custom Perplexity model name">
-        <p class="api-description">Enter the exact model identifier for a custom Perplexity model.</p>
       </div>
     </div>
     
@@ -284,15 +266,6 @@
       <p class="api-description">Select the default response style for AI answers. This can be changed for each message in the chat interface.</p>
     </div>
     
-    <div class="form-group">
-      <label for="language">Interface Language</label>
-      <select id="language">
-        <option value="en" selected>English</option>
-        <option value="tr">Türkçe</option>
-      </select>
-      <p class="api-description">Select the language for the extension interface.</p>
-    </div>
-    
     <button id="saveButton">Save Settings</button>
     <p id="successMessage" class="success-message">Settings saved successfully!</p>
     <p id="errorMessage" class="error-message">Error saving settings. Please try again.</p>
@@ -302,7 +275,6 @@
     <h3>Getting API Keys</h3>
     <ul>
       <li><strong>Google Gemini:</strong> Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
-      <li><strong>Perplexity:</strong> Get your API key from <a href="https://docs.perplexity.ai/docs/getting-started" target="_blank">Perplexity API</a></li>
       <li><strong>Together AI:</strong> Get your API key from <a href="https://docs.together.ai/docs/api-key" target="_blank">Together AI</a></li>
       <li><strong>Anthropic AI:</strong> Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank">Anthropic Console</a></li>
     </ul>
