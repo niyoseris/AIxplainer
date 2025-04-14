@@ -1,7 +1,6 @@
 // Create context menu item when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
-  // Set initial context menu with default provider
-  updateContextMenuTitle('gemini');
+  createContextMenuItem('Ask AI about selected text');
   
   // Listen for provider changes to update context menu
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -13,7 +12,6 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Function to update the context menu title based on provider
 function updateContextMenuTitle(provider) {
-  // Get the appropriate title based on provider
   let title = 'Ask AI about selected text';
   
   switch (provider) {
@@ -31,14 +29,24 @@ function updateContextMenuTitle(provider) {
       break;
   }
   
-  // Remove existing menu item if it exists
-  chrome.contextMenus.remove('askAI', () => {
-    // Create the new menu item with updated title
-    chrome.contextMenus.create({
-      id: 'askAI',
-      title: title,
-      contexts: ['selection']
-    });
+  chrome.contextMenus.update('askAI', { title: title }, () => {
+    if (chrome.runtime.lastError) {
+      // If update fails (menu doesn't exist), create it
+      createContextMenuItem(title);
+    }
+  });
+}
+
+// Helper function to create context menu item
+function createContextMenuItem(title) {
+  chrome.contextMenus.create({
+    id: 'askAI',
+    title: title,
+    contexts: ['selection']
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.log('Context menu creation error:', chrome.runtime.lastError);
+    }
   });
 }
 

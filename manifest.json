@@ -1,8 +1,8 @@
 {
-  "name": "AI Text Assistant",
+  "name": "AIXplainer",
   "version": "1.0",
   "manifest_version": 3,
-  "description": "Select text, right-click, and chat with Google Gemini AI directly on the page",
+  "description": "Select text, right-click, and chat with AI models directly on the page",
   "permissions": [
     "contextMenus",
     "activeTab",

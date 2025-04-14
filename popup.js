@@ -8,14 +8,14 @@ const assistantTitle = document.getElementById('assistantTitle');
 const popupTranslations = {
   en: {
     title: {
-      gemini: "Gemini AI Text Assistant",
-      perplexity: "Perplexity AI Text Assistant",
-      together: "Together AI Text Assistant",
-      anthropic: "Claude AI Text Assistant",
-      default: "AI Text Assistant"
+      gemini: "AIXplainer - Gemini",
+      perplexity: "AIXplainer - Perplexity",
+      together: "AIXplainer - Together",
+      anthropic: "AIXplainer - Claude",
+      default: "AIXplainer"
     },
     statusChecking: "Checking API configuration...",
-    statusConfigured: "{model} API is configured",
+    statusConfigured: "Ready to use",
     statusNotConfigured: "{provider} API key not configured",
     howToUse: "How to use:",
     instructions: [
@@ -29,14 +29,14 @@ const popupTranslations = {
   },
   tr: {
     title: {
-      gemini: "Gemini AI Metin Asistanı",
-      perplexity: "Perplexity AI Metin Asistanı",
-      together: "Together AI Metin Asistanı",
-      anthropic: "Claude AI Metin Asistanı",
-      default: "AI Metin Asistanı"
+      gemini: "AIXplainer - Gemini",
+      perplexity: "AIXplainer - Perplexity",
+      together: "AIXplainer - Together",
+      anthropic: "AIXplainer - Claude",
+      default: "AIXplainer"
     },
     statusChecking: "API yapılandırması kontrol ediliyor...",
-    statusConfigured: "{model} API yapılandırıldı",
+    statusConfigured: "Kullanıma hazır",
     statusNotConfigured: "{provider} API anahtarı yapılandırılmadı",
     howToUse: "Nasıl kullanılır:",
     instructions: [
@@ -114,42 +114,13 @@ function getProviderDisplayName(provider) {
 
 // Get model display name
 function getModelDisplayName(provider, modelVersion) {
-  if (provider === 'gemini') {
-    if (modelVersion === 'gemini-2.0-flash-thinking-exp-01-21') {
-      return 'Gemini 2.0 Flash';
-    } else if (modelVersion === 'gemini-pro-vision') {
-      return 'Gemini Pro Vision';
-    } else {
-      return 'Gemini Pro';
-    }
-  } else if (provider === 'perplexity') {
-    if (modelVersion) {
-      return `Perplexity ${modelVersion}`;
-    }
-    return 'Perplexity AI';
-  } else if (provider === 'together') {
-    if (modelVersion) {
-      return modelVersion;
-    }
-    return 'Together AI';
-  } else if (provider === 'anthropic') {
-    if (modelVersion) {
-      // Extract model name from the full version string
-      if (modelVersion.includes('claude-3-haiku')) {
-        return 'Claude 3 Haiku';
-      } else if (modelVersion.includes('claude-3-sonnet')) {
-        return 'Claude 3 Sonnet';
-      } else if (modelVersion.includes('claude-3-opus')) {
-        return 'Claude 3 Opus';
-      } else if (modelVersion.includes('claude-3-5-sonnet')) {
-        return 'Claude 3.5 Sonnet';
-      }
-      return modelVersion;
-    }
-    return 'Claude AI';
+  switch(provider) {
+    case 'gemini': return 'Google Gemini';
+    case 'perplexity': return 'Perplexity AI';
+    case 'together': return 'Together AI';
+    case 'anthropic': return 'Claude AI';
+    default: return 'AI Assistant';
   }
-  
-  return 'AI Assistant';
 }
 
 // Check if the API key is configured
@@ -159,6 +130,10 @@ function checkApiConfiguration() {
   statusText.textContent = popupTranslations[currentLanguage].statusChecking;
   
   chrome.storage.sync.get(['geminiApiKey', 'perplexityApiKey', 'togetherApiKey', 'anthropicApiKey', 'provider', 'modelVersion', 'language'], function(result) {
+    // Debug logs
+    console.log('Current Provider:', result.provider);
+    console.log('Model Version:', result.modelVersion);
+    
     // Update language if set
     if (result.language) {
       currentLanguage = result.language;
@@ -179,12 +154,13 @@ function checkApiConfiguration() {
       statusIndicator.classList.remove('status-not-configured');
       statusIndicator.classList.add('status-configured');
       
-      // Get model name for display
-      const modelDisplay = getModelDisplayName(currentProvider, result.modelVersion);
+      // Get model name for display - ensure we pass both provider and modelVersion
+      const modelDisplay = getModelDisplayName(currentProvider, result.modelVersion || '');
       
       // Store status and model info for translation
       statusText.dataset.status = 'configured';
       statusText.dataset.model = modelDisplay;
+      statusText.dataset.provider = currentProvider;
       
       // Update the text with proper translation
       statusText.textContent = popupTranslations[currentLanguage].statusConfigured.replace('{model}', modelDisplay);
@@ -193,8 +169,9 @@ function checkApiConfiguration() {
       statusIndicator.classList.remove('status-configured');
       statusIndicator.classList.add('status-not-configured');
       
-      // Store status for translation
+      // Store status and provider for translation
       statusText.dataset.status = 'not-configured';
+      statusText.dataset.provider = currentProvider;
       
       // Update text with proper translation
       const providerName = getProviderDisplayName(currentProvider);
